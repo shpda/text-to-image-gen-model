@@ -1,6 +1,7 @@
 from transformers import *
 
 from utils.pixelcnnpp_utils import *
+from utils.vocab import *
 import pdb
 from torch.nn.utils import weight_norm as wn
 from tqdm import tqdm
@@ -17,6 +18,10 @@ def class_embedding(n_classes, embedding_dim):
 
 def unconditional(n_classes, embedding_dim):
     return nn.Embedding(n_classes, embedding_dim)
+
+
+def glove_encoder():
+    return GloveEncoder()
 
 
 class Embedder(nn.Module):
@@ -89,3 +94,39 @@ class UnconditionalClassEmbedding(Embedder):
         '''
         zero = torch.zeros(class_labels.size(0), 1).to(class_labels.device)
         return zero
+
+
+class GloveEncoder(Embedder):
+    '''
+    glove to embed text
+    '''
+
+    def __init__(self):
+        super(GloveEncoder, self).__init__(embed_size=300)
+        glove_path = ""
+        embedding_size = 300
+        self.emb_matrix, self.word2id, self.id2word = get_glove(glove_path, embedding_size)
+#        self.pretrained_weights = 'bert-base-uncased'
+#        self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_weights)
+#        self.model = BertModel.from_pretrained(self.pretrained_weights)
+#        self.max_len = 50
+
+    def tokenize(self, text_batch):
+        text_token_ids = [
+            torch.tensor(self.tokenizer.encode(string_, add_special_tokens=False, max_length=self.max_len)) for
+            string_ in text_batch]
+        padded_input = pad_sequence(text_token_ids, batch_first=True, padding_value=0)
+        return padded_input
+
+    def forward(self, class_labels, captions):
+        '''
+        :param class_labels : torch.LongTensor, class ids
+        :param list captions: list of strings, sentences to embed
+        :return: torch.tensor embeddings: embeddings of shape (batch_size,embed_size=768)
+        '''
+
+        padded_input = self.tokenize(captions)
+        device = list(self.parameters())[0].device
+        padded_input = padded_input.to(device)
+        # takes the mean of the last hidden states computed by the pre-trained BERT encoder and return it
+        return self.model(padded_input)[0].mean(dim=1)

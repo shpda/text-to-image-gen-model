@@ -1,7 +1,7 @@
 import argparse
 import os
 from data import CIFAR10Dataset, Imagenet32Dataset
-from models.embedders import BERTEncoder, OneHotClassEmbedding, UnconditionalClassEmbedding
+from models.embedders import GloveEncoder, BERTEncoder, OneHotClassEmbedding, UnconditionalClassEmbedding
 import torch
 from models.pixelcnnpp import ConditionalPixelCNNpp
 from utils.utils import sample_image, load_model
@@ -140,6 +140,8 @@ if __name__ == "__main__":
         encoder = UnconditionalClassEmbedding()
     elif opt.conditioning == "bert":
         encoder = BERTEncoder()
+    elif opt.conditioning == "glove":
+        encoder = GloveEncoder()
     else:
         assert opt.conditioning == "one-hot"
         encoder = OneHotClassEmbedding(train_dataset.n_classes)

@@ -32,7 +32,7 @@ parser.add_argument("--model_checkpoint", type=str, default=None,
                     help="load model from checkpoint, model_checkpoint = path_to_your_pixel_cnn_model.pt")
 parser.add_argument("--print_every", type=int, default=10)
 parser.add_argument("--dataset", type=str, default="cifar10", choices=["imagenet32", "cifar10"])
-parser.add_argument("--conditioning", type=str, default="unconditional", choices=["unconditional", "one-hot", "bert"])
+parser.add_argument("--conditioning", type=str, default="unconditional", choices=["unconditional", "one-hot", "bert", "glove"])
 
 
 def train(model, embedder, optimizer, scheduler,

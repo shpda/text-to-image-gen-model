@@ -1,4 +1,5 @@
 import sys
+import re
 
 sys.path.append('/home/ooo/Documents/CS236/text-to-image-gen-model')
 
@@ -107,15 +108,61 @@ class GloveEncoder(Embedder):
     '''
 
     def __init__(self):
-        embedding_size = 300
-        super(GloveEncoder, self).__init__(embed_size=embedding_size)
-        self.glove = vocab.GloVe(name='6B', dim=embedding_size)
-        print('Glove embedding size: ' + str(embedding_size))
+        self.embedding_size = 300
+        super(GloveEncoder, self).__init__(embed_size=self.embedding_size)
+        self.glove = vocab.GloVe(name='6B', dim=self.embedding_size)
+        print('Glove embedding size: ' + str(self.embedding_size))
         print('Loaded {} words'.format(len(self.glove.itos)))
 
-    def tokenize(self, text_batch):
-        padded_input = self.glove.stoi[text_batch]
-        return padded_input
+        self.labelFileName = 'datasets/ImageNet32/map_clsloc.txt'
+        self.embeddingMap = dict()
+        self.buildEmbeddingMap()
+
+    def isKnown(self, word):
+        if word in self.glove.stoi:
+            return True
+        return False
+
+    def word2id(self, word):
+        # unknown word
+        wordIdx = 1
+        if word in self.glove.stoi:
+            wordIdx = self.glove.stoi[word]
+        return wordIdx
+
+    def buildEmbeddingMap(self):
+        labelFile = open(self.labelFileName, 'r')
+
+        n_total = 0
+        n_unknown = 0
+        for line in labelFile:
+            res = re.match('^(n\d+) (\d+) (\S+)', line)
+            label = res.group(3)
+            wList = re.split('_|-', label)
+            cnt = 0
+            avgTensor = torch.zeros([self.embedding_size])
+            for word in wList:
+                word = word.lower()
+                word = word.replace('\'s', '')
+                if self.isKnown(word):
+                    wordIdx = self.word2id(word)
+                    wordTensor = self.glove.vectors[wordIdx]
+                    avgTensor += wordTensor
+                    cnt += 1
+                if cnt == 0:
+                    n_unknown += 1
+                    avgTensor = self.glove.vectors[1] # unknown label
+                    #print(label)
+            if cnt > 0:
+                avgTensor /= cnt
+            caption = label.replace("_", " ")
+            self.embeddingMap[caption] = avgTensor
+            n_total += 1
+
+        labelFile.close()
+
+        print('Total labels = ' + str(n_total))
+        print('GloVe unknown labels = ' + str(n_unknown))
 
     def forward(self, class_labels, captions):
         '''
@@ -124,10 +171,33 @@ class GloveEncoder(Embedder):
         :return: torch.tensor embeddings: embeddings of shape (batch_size,embed_size=768)
         '''
         device = class_labels.device
-        tList = [self.glove.vectors[self.tokenize(word)] for word in captions]
+        #tList = [self.glove.vectors[self.word2id(word)] for word in captions]
+        tList = [self.embeddingMap[caption] for caption in captions]
         t = torch.stack(tList)
         return t.to(device)
 
 if __name__ == "__main__":
+    print("Test GloVe on imagenet labels")
+
     embedder = GloveEncoder()
-    print(embedder.forward([1], 'hello'))
+
+    n_total = 0
+    n_unknown = 0
+    labelFileName = 'datasets/ImageNet32/map_clsloc.txt'
+    labelFile = open(labelFileName, 'r')
+
+    for line in labelFile:
+        res = re.match('^(n\d+) (\d+) (\S+)', line)
+        label = res.group(3)
+        label = label.replace("_", " ")
+        #print(label)
+        if not embedder.isKnown(label):
+            n_unknown += 1
+        n_total += 1
+
+    labelFile.close()
+
+    print('Total labels = ' + str(n_total))
+    print('Unknown labels = ' + str(n_unknown))
+
+#    print(embedder.forward([1], 'hello'))

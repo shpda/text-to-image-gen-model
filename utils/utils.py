@@ -17,11 +17,8 @@ def sample_image(model, encoder, output_image_dir, n_row, batches_done, dataload
     done = False
     while not done:
         for (_, labels_batch, captions_batch) in dataloader:
-            print(labels_batch)
-            print(captions_batch)
             captions += captions_batch
             conditional_embeddings = encoder(labels_batch.to(device), captions)
-            print(conditional_embeddings)
             imgs = model.sample(conditional_embeddings).cpu()
             gen_imgs.append(imgs)
 

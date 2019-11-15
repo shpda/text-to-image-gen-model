@@ -84,22 +84,22 @@ def eval(model, embedder, test_loader):
     print("EVALUATING ON VAL")
     model = model.eval()
 
-#    sample_image(model, embedder, opt.output_dir, n_row=4,
-#                 batches_done=1,
-#                 dataloader=test_loader, device=device)
+    sample_image(model, embedder, opt.output_dir, n_row=4,
+                 batches_done=2,
+                 dataloader=test_loader, device=device)
 
     bpd = 0.0
-    for i, (imgs, labels, captions) in tqdm(enumerate(test_loader)):
-        imgs = imgs.to(device)
-        labels = labels.to(device)
-
-        with torch.no_grad():
-            condition_embd = embedder(labels, captions)
-            outputs = model.forward(imgs, condition_embd)
-            loss = outputs['loss'].mean()
-            bpd += loss / np.log(2)
-    bpd /= len(test_loader)
-    print("VAL bpd : {}".format(bpd))
+#    for i, (imgs, labels, captions) in tqdm(enumerate(test_loader)):
+#        imgs = imgs.to(device)
+#        labels = labels.to(device)
+#
+#        with torch.no_grad():
+#            condition_embd = embedder(labels, captions)
+#            outputs = model.forward(imgs, condition_embd)
+#            loss = outputs['loss'].mean()
+#            bpd += loss / np.log(2)
+#    bpd /= len(test_loader)
+#    print("VAL bpd : {}".format(bpd))
     return bpd
 
 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(opt.output_dir, "models"), exist_ok=True)
     os.makedirs(os.path.join(opt.output_dir, "tensorboard"), exist_ok=True)
-    writer = SummaryWriter(log_dir=os.path.join(opt.output_dir, "tensorboard"))
+    writer = SummaryWriter(log_dir=os.path.join(opt.output_dir, "tensorboard"), comment='Glove ImageNet32')
 
     # ----------
     #  Training
